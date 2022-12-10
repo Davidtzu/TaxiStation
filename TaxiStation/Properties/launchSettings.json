@@ -1,0 +1,23 @@
+{
+  "profiles": {
+    "Template_MVC_Vue": {
+      "commandName": "Project",
+      "launchBrowser": true,
+        "environmentVariables": {
+            "ASPNETCORE_ENVIRONMENT": "Development",
+            "JWT_SECRET": "SpecialAppSecret",
+            "sql13DbUser": "1",
+            "sql13DbPassword": "<!",
+        },
+      "dotnetRunMessages": "true",
+      "applicationUrl": "https://localhost:8000"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "publishAllPorts": true,
+      "useSSL": true
+    }
+  }
+}

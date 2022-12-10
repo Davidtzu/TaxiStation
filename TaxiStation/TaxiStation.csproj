@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<UserSecretsId>bb1f57fd-029f-4726-b4bb-da178df3a935</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<RootNamespace>TaxiStation</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Connected Services\**" />
+	  <Compile Remove="OpenAPIs\**" />
+	  <Content Remove="Connected Services\**" />
+	  <Content Remove="OpenAPIs\**" />
+	  <EmbeddedResource Remove="Connected Services\**" />
+	  <EmbeddedResource Remove="OpenAPIs\**" />
+	  <None Remove="Connected Services\**" />
+	  <None Remove="OpenAPIs\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Remove="bundleconfig.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="bundleconfig.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Confluent.Kafka" Version="1.5.0" />
+
+    		<PackageReference Include="Confluent.Kafka" Version="1.9.3" />
+
+    		<PackageReference Include="kafka-sharp" Version="1.4.3" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
+		<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="2.0.1" />
+		<PackageReference Include="Microsoft.Extensions.ApiDescription.Client" Version="3.0.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.6" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="NSwag.ApiDescription.Client" Version="13.0.5">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="PusherServer" Version="4.6.1" />
+	</ItemGroup>
+</Project>

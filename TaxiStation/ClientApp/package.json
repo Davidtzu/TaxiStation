@@ -1,0 +1,73 @@
+{
+	"name": "ClientApp",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"serve": "vue-cli-service serve",
+		"build": "vue-cli-service build",
+		"lint": "vue-cli-service lint"
+	},
+	"dependencies": {
+		"@ag-grid-enterprise/all-modules": "^25.3.0",
+		"@vue/cli": "4.5.8",
+		"@vue/cli-service": "4.5.6",
+		"ag-grid-community": "^25.3.0",
+		"ag-grid-enterprise": "^25.3.0",
+		"ag-grid-vue": "^25.3.0",
+		"ajv": "6.12.6",
+		"axios": "0.21.1",
+		"core-js": "3.6.5",
+		"pusher-js": "^7.5.0",
+		"sass-loader": "8.0.2",
+		"semver": "6.3.0",
+		"socket.io": "^4.5.4",
+		"tus-js-client": "2.3.0",
+		"vue": "2.6.11",
+		"vue-axios": "3.2.0",
+		"vue-i18n": "8.22.1",
+		"vue-moment": "^4.1.0",
+		"vue-property-decorator": "8.0.0",
+		"vue-router": "3.4.9",
+		"vue-socket.io": "3.0.10",
+		"vue-sweetalert2": "4.1.1",
+		"vue-uuid": "2.0.2",
+		"vuetify": "2.3.18",
+		"vuex": "3.5.1"
+	},
+	"devDependencies": {
+		"@mdi/font": "5.8.55",
+		"@vue/cli-plugin-babel": "4.5.0",
+		"@vue/cli-plugin-eslint": "4.5.0",
+		"@vue/cli-plugin-router": "4.5.8",
+		"babel-eslint": "10.1.0",
+		"eslint": "6.7.2",
+		"eslint-plugin-vue": "6.2.2",
+		"sass": "1.19.0",
+		"vue-cli-plugin-vuetify": "~2.0.7",
+		"vue-template-compiler": "2.6.11",
+		"vuetify-loader": "1.6.0"
+	},
+	"eslintConfig": {
+		"root": true,
+		"env": {
+			"node": true
+		},
+		"extends": [
+			"plugin:vue/essential",
+			"eslint:recommended"
+		],
+		"parserOptions": {
+			"parser": "babel-eslint"
+		},
+		"rules": {
+			"strict": "off",
+			"no-unused-vars": "off",
+			"no-mixed-spaces-and-tabs": 0
+		}
+	},
+	"browserslist": [
+		"> 1%",
+		"last 2 versions",
+		"not dead"
+	]
+}
