@@ -36,7 +36,6 @@
 
 <script>
     import { AgGridVue } from 'ag-grid-vue';
-    import io from "socket.io-client";
     export default {
         components: { AgGridVue },
         name: "MainTable",
@@ -44,13 +43,14 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
+            user: {ID:"taxiStation"}
+
         }),
         created() {
-            this.$http.get("/api/main/GetDriveHistory").then((response) => {
+            this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
                 console.log(response.data);
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
-
         },
         watch: {
             search(newSearch, OldSearch) {

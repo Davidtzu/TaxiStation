@@ -2,7 +2,8 @@
 {
     public class MessageDTO
     {
-        public string userName { get; set; }
-        public string message { get; set; }
+        public string userID { get; set; }
+        public string taxiID { get; set; }
+        public int action { get; set; }
     }
 }

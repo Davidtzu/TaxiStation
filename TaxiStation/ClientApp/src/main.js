@@ -9,25 +9,17 @@ import '@mdi/font/css/materialdesignicons.css'
 import VueSweetalert2 from 'vue-sweetalert2'
 import Vuex from 'vuex'
 import VueMoment from 'vue-moment'
-import Pusher from 'pusher-js';
-
-
 import "ag-grid-enterprise";
-/*import { LicenseManager } from "ag-grid-enterprise";*/
-/*LicenseManager.setLicenseKey(window.ITGlobalConfig.agGridLicenseKey);*/
 import '../node_modules/ag-grid-community/dist/styles/ag-grid.css';
 import '../node_modules/ag-grid-community/dist/styles/ag-theme-alpine.css';
 import '../node_modules/ag-grid-community/dist/styles/ag-theme-balham.css';
 import '../node_modules/ag-grid-community/dist/styles/ag-theme-bootstrap.css';
 
-
 Vue.prototype.$http = axios;
 Vue.use(Vuex);
 Vue.use(axios);
 Vue.use(VueSweetalert2);
-Vue.use(Pusher);
 Vue.use(VueMoment);
-
 
 
 

@@ -1,6 +1,7 @@
 ﻿using IT_TaxiStation;
 using Microsoft.Data.SqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 
 
@@ -9,7 +10,22 @@ namespace TaxiStation.DAL
     public class clsDal
     {
 
-
+        public static void FinishDrive(int taxiID)
+        {
+            using (var conn = new SqlConnection(Helpers.getConnectionString()))
+            {
+                conn.Open();
+                using (var command = new SqlCommand("FinishDrive", conn))
+                {
+                    SqlDataAdapter sa = new SqlDataAdapter();
+                    sa.SelectCommand = command;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("taxiID", taxiID);
+                    command.ExecuteNonQuery();
+                }
+                conn.Close();
+            }
+        }
         public static DataSet GetInfraData()
         {
             DataSet res = new DataSet("InfraData");
@@ -33,7 +49,7 @@ namespace TaxiStation.DAL
             return res;
         }
 
-        public static DataSet GetDriveHistory()
+        public static DataSet GetDriveHistory(string userID, int userType)
         {
             DataSet res = new DataSet("GetDriveHistory");
             using (var conn = new SqlConnection(Helpers.getConnectionString()))
@@ -41,9 +57,11 @@ namespace TaxiStation.DAL
                 conn.Open();
                 using (var command = new SqlCommand("GetDriveHistory", conn))
                 {
-                    command.CommandType = CommandType.StoredProcedure;
                     SqlDataAdapter sa = new SqlDataAdapter();
                     sa.SelectCommand = command;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("userID", userID);
+                    command.Parameters.AddWithValue("userType", userType);
                     sa.Fill(res);
                     if (res == null || res.Tables.Count < 1)
                     {
@@ -55,26 +73,28 @@ namespace TaxiStation.DAL
             }
             return res;
         }
-        public static DataSet GetAvailableTaxis()
-        {
-            DataSet res = new DataSet("GetAvailableTaxis");
-            using (var conn = new SqlConnection(Helpers.getConnectionString()))
-            {
-                conn.Open();
-                using (var command = new SqlCommand("GetAvailableTaxis", conn))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    SqlDataAdapter sa = new SqlDataAdapter();
-                    sa.SelectCommand = command;
-                    sa.Fill(res);
-                    if (res == null || res.Tables.Count < 1)
-                    {
-                        throw new Exception("returned invalid result set from db");
-                    }
-                }
-            }
-            return res;
-        }
+        //public static DataSet GetAvailableTaxis(List<string> lisiningTaxiList)
+        //{
+        //    DataSet res = new DataSet("GetAvailableTaxis");
+        //    using (var conn = new SqlConnection(Helpers.getConnectionString()))
+        //    {
+        //        conn.Open();
+        //        using (var command = new SqlCommand("GetAvailableTaxis", conn))
+        //        {
+        //            command.CommandType = CommandType.StoredProcedure;
+        //            command.Parameters.AddWithValue("userID", userID);
+
+        //            SqlDataAdapter sa = new SqlDataAdapter();
+        //            sa.SelectCommand = command;
+        //            sa.Fill(res);
+        //            if (res == null || res.Tables.Count < 1)
+        //            {
+        //                throw new Exception("returned invalid result set from db");
+        //            }
+        //        }
+        //    }
+        //    return res;
+        //}
 
 
         public static bool SaveUserApproveRequest_SaveUserRequest(int requestId)
@@ -101,5 +121,33 @@ namespace TaxiStation.DAL
             }
             return true;
         }
+
+        public static bool InsertDrive(string userID, string taxiID)
+        {
+            var isAdded = false;
+            using (var conn = new SqlConnection(Helpers.getConnectionString()))
+            {
+                conn.Open();
+                using (var command = new SqlCommand("InsertDrive", conn))
+                {
+                    SqlDataAdapter sa = new SqlDataAdapter();
+
+                    sa.SelectCommand = command;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("userID", userID);
+                    command.Parameters.AddWithValue("taxiID", taxiID);
+                    //if i want parameter out
+                    command.Parameters.AddWithValue("isAdded", isAdded);
+                    command.Parameters["isAdded"].Direction = ParameterDirection.Output;
+                    command.ExecuteNonQuery();
+                    isAdded = Convert.ToBoolean(command.Parameters["isAdded"].Value);
+                }
+                conn.Close();
+            }
+            return isAdded;
+        }
+
+
+        
     }
 }

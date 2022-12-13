@@ -1,5 +1,17 @@
 <template>
     <div class="component-root">
+        <v-card elevation="8" outlined class="card-settings">
+            <v-card-title class="box-header">
+                <div height="50px">חיפוש כללי</div>
+            </v-card-title>
+            <v-text-field outlined
+                          v-model="search"
+                          prepend-inner-icon="mdi-magnify"
+                          label="הקלד ערך לחיפוש"
+                          placeholder
+                          class="my-input"
+                          dense></v-text-field>
+        </v-card>
         <v-card elevation="8" outlined class="card-settings" height="calc(75vh - 500px)">
 
             <v-card-title class="box-header" >
@@ -32,22 +44,27 @@
 
 <script>
     import { AgGridVue } from 'ag-grid-vue';
+    import Pusher from 'pusher-js';
+    import { onMounted } from 'vue'
+    import Action from "./../enums/taxiStationEnums";
 
     export default {
         components: { AgGridVue },
-        name: "MainTable",
+        name: "CustomerScreen",
         data: () => ({
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            socketInstance: null
+            PusherData: { userID: "3", taxiID: "", action: Action.SearchTaxi },
+            user: {ID:"3"}
+
         }),
         created() {
-            this.$http.get("/api/main/GetDriveHistory").then((response) => {
+            this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
                 console.log(response.data);
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
-
+            this.subscribe();
         },
         watch: {
             search(newSearch, OldSearch) {
@@ -64,25 +81,73 @@
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
             },
-            searchTaxi() {
-                this.$http.get("/api/main/StartSocket").then((response) => {
-                    const message = {
-                        id: 1,
-                        text: "asd"
-                    }
-                    this.socketInstance.emit("message", message);
-
+            refreshData(){
+                this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
+                                this.$store.commit('SetRowData', response.data.DriveHistory);
+                            });
+            },
+            subscribe(){
+                Pusher.logToConsole = true;
+                const pusher = new Pusher('52a43643bf829d8624d0', {
+                    cluster: 'us2'
                 });
 
-                this.socketInstance.on(
-                    "message:received", (data) =>{
-                        //do something
-                    }
-                )
+                const channel = pusher.subscribe('chat');
+                channel.bind('message', data => {
+                        if(data.action == Action.foundTaxi){
+                            this.$swal.fire({
+                                title: "נמצא נהג",
+                                text: "הנהג בדרך אליך",
+                                icon: "info",
+                                timer: 3000
+                            });
+                            setInterval(this.refreshData, 10000);
+                        }
+                        else if(data.action == Action.noneTaxiAvailable){
+                            this.$swal.fire({
+                                    title: "לא נמצא נהג",
+                                    text: "אנא נסה שנית מאוחר יותר",
+                                    icon: "info",
+                                    timer: 3000
+                                });
+                        }
 
-
+                });
             },
+            searchTaxi() {
+                this.$http.post("/api/main/Messages", this.PusherData).then((response) => {
+                });
+            }
         },
+        //     Pusher.logToConsole = true;
+        //     const pusher = new Pusher('52a43643bf829d8624d0', {
+        //         cluster: 'us2'
+        //     });
+
+        //     const channel = pusher.subscribe('chat');
+        //     channel.bind('message', data => {
+        //         console.log("DATA FROM PUSHER->DATA: " + data)
+        //         if(data.userID === this.ID){
+        //             if(data.action == Action.foundTaxi){
+        //                 this.$swal.fire({
+        //                         title: "נמצא נהג",
+        //                         text: "הנהג בדרך אליך",
+        //                         icon: "info",
+        //                         timer: 3000
+        //                     });
+        //                 }
+        //             else if(data.action == Action.noneTaxiAvailable){
+        //                 this.$swal.fire({
+        //                         title: "לא נמצא נהג",
+        //                         text: "אנא נסה שנית מאוחר יותר",
+        //                         icon: "info",
+        //                         timer: 3000
+        //                     });
+        //             }
+        //         }
+
+        //     });
+        // }),
         beforeMount() {
             this.ColumnDefs = [
                 {
@@ -121,7 +186,7 @@
                 }
             ];
         }
-    };
+    }
 </script>
 
 <style scoped>

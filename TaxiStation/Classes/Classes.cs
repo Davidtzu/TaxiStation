@@ -108,14 +108,19 @@ namespace TaxiStation.Classes
 
     public class AvailableTaxis
     {
-        public int taxiID { get; set; }
-        public string location { get; set; }
-        public AvailableTaxis(DataRow dr)
-        {
-            taxiID = dr.Field<int>("TaxiID");
-            location = dr.Field<string>("Location");
-        }
+        public string taxiID { get; set; }
+        public Point location { get; set; }
+
     }
+    public class TaxiID
+    {
+        public string taxiID { get; set; }
+    }
+    public class SearchHistoryByID
+    {
+        public string ID { get; set; }
+    }
+
     public class Taxi : User
     {
         public int taxiID { get; set; }
