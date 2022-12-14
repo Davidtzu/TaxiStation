@@ -2,7 +2,7 @@
     <div class="component-root">
         <v-card elevation="8" outlined class="card-settings">
             <v-card-title class="box-header">
-                <div height="50px">חיפוש כללי</div>
+                חיפוש כללי
             </v-card-title>
             <v-text-field outlined
                           v-model="search"
@@ -12,7 +12,7 @@
                           class="my-input"
                           dense></v-text-field>
         </v-card>
-        <v-card elevation="8" outlined class="card-settings" height="calc(100vh - 208px)">
+        <v-card elevation="8" outlined class="card-settings historySize">
             <v-card-title class="box-header">
                 היסטוריית נסיעות
                 <label class="mx-1">|</label>
@@ -25,6 +25,7 @@
 
             <ag-grid-vue class="ag-theme-balham ag-grid-size"
                          :columnDefs="ColumnDefs"
+                         :defaultColDef="defaultColDef"
                          :rowData="RowData"
                          :enableRtl ="true"
                          @grid-ready="onGridReady">
@@ -43,14 +44,18 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            user: {ID:"taxiStation"}
-
+            user: {ID:"taxiStation"},
+            defaultColDef: {
+                sortable: true,
+                resizable: true,
+            },
         }),
         created() {
             this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
                 console.log(response.data);
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
+            window.addEventListener("resize", this.SizeToFit);
         },
         watch: {
             search(newSearch, OldSearch) {
@@ -63,6 +68,9 @@
             }
         },
         methods: {
+            SizeToFit(){
+                this.gridApi.sizeColumnsToFit();
+            },
             onGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
@@ -70,6 +78,7 @@
             ExortToCsc() {
                 this.gridApi.exportDataAsExcel();
             },
+            
         },
         beforeMount() {
             this.ColumnDefs = [
@@ -93,22 +102,31 @@
                     field: "startDate",
                     headerName: 'התחלת נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data).format('HH:mm ,D/MM/YYYY');
+                        return this.$moment(params.data.startDate).format('HH:MM ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "finishDate",
                     headerName: 'סיום נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data).format('HH:mm ,D/MM/YYYY');
+                        return this.$moment(params.data.finishDate).format('HH:MM ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "cost",
                     headerName: 'מחיר נסיעה',
+                },
+                {
+                    field: "pickUp",
+                    headerName: 'נקודות איסוף',
+                },
+                {
+                    field: "takenDown",
+                    headerName: 'נקודות הורדה',
                 }
             ];
-        }
+            
+        },
     };
 </script>
 
@@ -119,7 +137,7 @@
 
     .ag-grid-size {
         width:100%;
-        height:460px;
+        height: 90%;
     }
 
     .component-root {
@@ -161,7 +179,9 @@
         white-space: nowrap;
         vertical-align: middle;
     }
-
+    .historySize{
+        height: 100%;
+    }
     .label {
         display: inline-block;
         margin-bottom: 0.5rem;
@@ -189,7 +209,6 @@
         font-family: Arial, Helvetica, sans-serif;
     }
 </style>
-
 
 
 

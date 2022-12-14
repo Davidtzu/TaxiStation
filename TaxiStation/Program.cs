@@ -24,11 +24,6 @@ namespace Template_MVC_Vue
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureServices((context, collection) =>
-                {
-                    collection.AddHostedService<kafkaConsumerHostedService>();
-                    collection.AddHostedService<KafkaProducerHostedService>();
-                })
                 .ConfigureWebHostDefaults((webBuilder) =>
                 {
                     webBuilder.UseStartup<Startup>();

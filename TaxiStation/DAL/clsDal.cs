@@ -1,7 +1,6 @@
 ﻿using IT_TaxiStation;
 using Microsoft.Data.SqlClient;
 using System;
-using System.Collections.Generic;
 using System.Data;
 
 
@@ -9,13 +8,30 @@ namespace TaxiStation.DAL
 {
     public class clsDal
     {
-
-        public static void FinishDrive(int taxiID)
+        public static void FinishDrive(int TaxiID, int UserID)
         {
             using (var conn = new SqlConnection(Helpers.getConnectionString()))
             {
                 conn.Open();
                 using (var command = new SqlCommand("FinishDrive", conn))
+                {
+                    SqlDataAdapter sa = new SqlDataAdapter();
+                    sa.SelectCommand = command;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("TaxiID", TaxiID);
+                    command.Parameters.AddWithValue("UserID", UserID);
+                    command.ExecuteNonQuery();
+                }
+                conn.Close();
+            }
+        }
+
+        public static void AddTaxiToPool(int taxiID)
+        {
+            using (var conn = new SqlConnection(Helpers.getConnectionString()))
+            {
+                conn.Open();
+                using (var command = new SqlCommand("addTaxiToPool", conn))
                 {
                     SqlDataAdapter sa = new SqlDataAdapter();
                     sa.SelectCommand = command;
@@ -26,24 +42,39 @@ namespace TaxiStation.DAL
                 conn.Close();
             }
         }
-        public static DataSet GetInfraData()
+
+        public static void ClearPoolOfTaxis()
         {
-            DataSet res = new DataSet("InfraData");
             using (var conn = new SqlConnection(Helpers.getConnectionString()))
             {
                 conn.Open();
-                using (var command = new SqlCommand("InfraData", conn))
+                using (var command = new SqlCommand("clearPoolOfTaxis", conn))
+                {
+                    SqlDataAdapter sa = new SqlDataAdapter();
+                    sa.SelectCommand = command;
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.ExecuteNonQuery();
+                }
+                conn.Close();
+            }
+        }
+
+        public static DataSet GetLisiningTaxis()
+        {
+            DataSet res = new DataSet("GetLisiningTaxis");
+            using (var conn = new SqlConnection(Helpers.getConnectionString()))
+            {
+                conn.Open();
+                using (var command = new SqlCommand("GetLisiningTaxis", conn))
                 {
                     command.CommandType = CommandType.StoredProcedure;
                     SqlDataAdapter sa = new SqlDataAdapter();
                     sa.SelectCommand = command;
                     sa.Fill(res);
-                    if(res == null || res.Tables.Count < 1)
+                    if (res == null || res.Tables.Count < 1)
                     {
                         throw new Exception("returned invalid result set from db");
                     }
-                    res.Tables[0].TableName = Helpers.c_tablename;
-                    res.Tables[1].TableName = Helpers.c_tablename;
                 }
             }
             return res;
@@ -73,54 +104,6 @@ namespace TaxiStation.DAL
             }
             return res;
         }
-        //public static DataSet GetAvailableTaxis(List<string> lisiningTaxiList)
-        //{
-        //    DataSet res = new DataSet("GetAvailableTaxis");
-        //    using (var conn = new SqlConnection(Helpers.getConnectionString()))
-        //    {
-        //        conn.Open();
-        //        using (var command = new SqlCommand("GetAvailableTaxis", conn))
-        //        {
-        //            command.CommandType = CommandType.StoredProcedure;
-        //            command.Parameters.AddWithValue("userID", userID);
-
-        //            SqlDataAdapter sa = new SqlDataAdapter();
-        //            sa.SelectCommand = command;
-        //            sa.Fill(res);
-        //            if (res == null || res.Tables.Count < 1)
-        //            {
-        //                throw new Exception("returned invalid result set from db");
-        //            }
-        //        }
-        //    }
-        //    return res;
-        //}
-
-
-        public static bool SaveUserApproveRequest_SaveUserRequest(int requestId)
-        {
-            var parameterOutName = 10;
-            using (var conn = new SqlConnection(Helpers.getConnectionString()))
-            {
-                conn.Open();
-                using (var command = new SqlCommand("StoredProcedureName", conn))
-                {
-                    SqlDataAdapter sa = new SqlDataAdapter();
-
-                    sa.SelectCommand = command;
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("requestId", requestId);
-
-                    //if i want parameter out
-                    command.Parameters.AddWithValue("parameterOutName", parameterOutName);
-                    command.Parameters["parameterOutName"].Direction = ParameterDirection.Output;
-                    command.ExecuteNonQuery();
-                    parameterOutName = Convert.ToInt32(command.Parameters["parameterOutName"].Value);
-                }
-                conn.Close();
-            }
-            return true;
-        }
 
         public static bool InsertDrive(string userID, string taxiID)
         {
@@ -146,8 +129,5 @@ namespace TaxiStation.DAL
             }
             return isAdded;
         }
-
-
-        
     }
 }

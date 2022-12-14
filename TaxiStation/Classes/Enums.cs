@@ -11,4 +11,14 @@ namespace TaxiStation.Classes
         taxis = 2,
         taxiStation = 3
     }
+
+
+    public enum PusherAction
+    {
+        SearchTaxi = 1,
+        GetDrive = 2,
+        foundTaxi = 3,
+        noneTaxiAvailable = 4
+    }
+
 }

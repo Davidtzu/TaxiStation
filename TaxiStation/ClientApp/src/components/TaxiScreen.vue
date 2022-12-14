@@ -2,7 +2,7 @@
     <div class="component-root">
         <v-card elevation="8" outlined class="card-settings">
             <v-card-title class="box-header">
-                <div height="50px">חיפוש כללי</div>
+                חיפוש כללי
             </v-card-title>
             <v-text-field outlined
                           v-model="search"
@@ -12,7 +12,7 @@
                           class="my-input"
                           dense></v-text-field>
         </v-card>
-        <v-card elevation="8" outlined class="card-settings" height="calc(100vh - 170px)">
+        <v-card elevation="8" outlined class="card-settings historySize">
             <v-card-title class="box-header">
                 היסטוריית נסיעות שלי
                 <label class="mx-1">|</label>
@@ -21,6 +21,7 @@
 
             <ag-grid-vue class="ag-theme-balham ag-grid-size"
                          :columnDefs="ColumnDefs"
+                         :defaultColDef="defaultColDef"
                          :rowData="RowData"
                          :enableRtl="true"
                          @grid-ready="onGridReady">
@@ -42,7 +43,11 @@
             ColumnDefs: null,
             search: "",
             PusherData: { userID: "", taxiID: "30", action: Action.SearchTaxi },
-            user: {ID:"30"}   
+            user: {ID:"30"},
+            defaultColDef: {
+                sortable: true,
+                resizable: true,
+            },
         }),
         created() {
             this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
@@ -50,10 +55,7 @@
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
             this.subscribe();
-            // this.$http.get("/api/main/addKafkaCunsomer").then((response) => {
-            //     console.log(response.data);
-            // });
-
+            window.addEventListener("resize", this.SizeToFit);
         },
         watch: {
             search(newSearch, OldSearch) {
@@ -66,6 +68,9 @@
             }
         },
         methods: {
+            SizeToFit(){
+                this.gridApi.sizeColumnsToFit();
+            },
             onGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
@@ -105,10 +110,11 @@
                             icon: "info",
                             showDenyButton: true,
                             confirmButtonText: "כן",
-                            denyButtonText: "לא"
+                            denyButtonText: "לא",
+                            timer: 5000
                         }).then((result) =>{
                             if(result.isConfirmed){
-                                this.$http.post("/api/main/Messages", {userID: "", taxiID:this.PusherData.taxiID, action: Action.GetDrive}).then((response) => {
+                                this.$http.post("/api/main/MessagesFromTaxi", {userID: "", taxiID:this.PusherData.taxiID, action: Action.GetDrive}).then((response) => {
                                 });
                             }
                         }).catch(function (err){
@@ -119,15 +125,22 @@
                             });
                         });
                     }
-                    else if(data.userID === this.user.ID && data.action == Action.foundTaxi){ //response to driver - got the drive
+                    else if(data.userID === this.user.ID && data.action == Action.foundTaxi){
                         this.$swal.fire({
                                 title: "קבלת הנסיעה",
                                 text: "!הנסיעה התקבלה",
                                 icon: "success",
                                 timer: 3000
                             });
-                            setInterval(this.refreshData, 10000);
-
+                            this.refreshData();
+                    }
+                    else if(data.userID !== this.user.ID && data.action == Action.foundTaxi){
+                        this.$swal.fire({
+                                title: "מידע אודות הנסיעה",
+                                text: "מונית קרובה יותר אל הלקוח קיבלה את הנסיעה",
+                                icon: "info",
+                                timer: 4000
+                            });
                     }
                 });
             }
@@ -155,29 +168,29 @@
                     field: "startDate",
                     headerName: 'התחלת נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data).format('HH:mm ,D/MM/YYYY');
+                        return this.$moment(params.data.startDate).format('HH:MM ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "finishDate",
                     headerName: 'סיום נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data).format('HH:mm ,D/MM/YYYY');
+                        return this.$moment(params.data.finishDate).format('HH:MM ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "cost",
                     headerName: 'מחיר נסיעה',
+                },
+                {
+                    field: "pickUp",
+                    headerName: 'נקודות איסוף',
+                },
+                {
+                    field: "takenDown",
+                    headerName: 'נקודות הורדה',
                 }
             ];
         }
-
     };
 </script>
-
-<style scoped>
-    .ag-grid-size {
-        width: 100%;
-        height: 505px;
-    }
-</style>
