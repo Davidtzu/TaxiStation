@@ -11,8 +11,6 @@ namespace TaxiStation.Classes
         taxis = 2,
         taxiStation = 3
     }
-
-
     public enum PusherAction
     {
         SearchTaxi = 1,
