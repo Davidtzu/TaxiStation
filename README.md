@@ -10,9 +10,11 @@ to run the template you need this versions of nodejs and npm:
 
 * NPM : 8.5.0
 
-
 extra information to run the project:
 
 * docker desktop
 * docker image cp-kafka (ip: 9092)
 * docker image cp-zookeeper(ip: 2181)
+
+
+SQL DATA are in this folder, just attach the files to load all the data.
