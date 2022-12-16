@@ -28,7 +28,7 @@
                          :columnDefs="ColumnDefs"
                          :defaultColDef="defaultColDef"
                          :rowData="RowData"
-                         :enableRtl ="true"
+                         :enableRtl="true"
                          @grid-ready="onGridReady">
             </ag-grid-vue>
         </v-card>
@@ -39,8 +39,8 @@
 <script>
     import { AgGridVue } from 'ag-grid-vue';
     import Pusher from 'pusher-js';
-    import { onMounted } from 'vue'
-    import Action from "./../enums/taxiStationEnums";
+    import Action from '../enums/actionEnum.js';
+    import UserType  from '../enums/userTypeEnum.js';
 
     export default {
         components: { AgGridVue },
@@ -50,7 +50,7 @@
             ColumnDefs: null,
             search: "",
             PusherData: { userID: "3", taxiID: "", action: Action.SearchTaxi },
-            user: {ID:"3"},
+            GetDriveHistoryData: { ID: "3", userType: UserType.user },
             defaultColDef: {
                 sortable: true,
                 resizable: true,
@@ -58,7 +58,7 @@
 
         }),
         created() {
-            this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
+            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
                 console.log(response.data);
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
@@ -76,19 +76,23 @@
             }
         },
         methods: {
-            SizeToFit(){
+            SizeToFit() {
                 this.gridApi.sizeColumnsToFit();
             },
             onGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
             },
-            refreshData(){
-                this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
-                                this.$store.commit('SetRowData', response.data.DriveHistory);
-                            });
+            refreshData() {
+                setTimeout(() => {
+                    this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
+                        if (response && response.data) {
+                            this.$store.commit('SetRowData', response.data.DriveHistory);
+                        }
+                    })
+                }, 2000);
             },
-            subscribe(){
+            subscribe() {
                 Pusher.logToConsole = true;
                 const pusher = new Pusher('52a43643bf829d8624d0', {
                     cluster: 'us2'
@@ -96,23 +100,23 @@
 
                 const channel = pusher.subscribe('chat');
                 channel.bind('message', data => {
-                        if(data.action == Action.foundTaxi){
-                            this.$swal.fire({
-                                title: "נמצא נהג",
-                                text: "הנהג בדרך אליך",
-                                icon: "info",
-                                timer: 3000
-                            });
-                            this.refreshData();
-                        }
-                        else if(data.action == Action.noneTaxiAvailable){
-                            this.$swal.fire({
-                                    title: "לא נמצא נהג",
-                                    text: "אנא נסה שנית מאוחר יותר",
-                                    icon: "info",
-                                    timer: 3000
-                                });
-                        }
+                    if (data.action == Action.foundTaxi) {
+                        this.$swal.fire({
+                            title: "נמצא נהג",
+                            text: "הנהג בדרך אליך",
+                            icon: "info",
+                            timer: 3000
+                        });
+                        this.refreshData();
+                    }
+                    else if (data.action == Action.noneTaxiAvailable) {
+                        this.$swal.fire({
+                            title: "לא נמצא נהג",
+                            text: "אנא נסה שנית מאוחר יותר",
+                            icon: "info",
+                            timer: 3000
+                        });
+                    }
 
                 });
             },
@@ -143,14 +147,14 @@
                     field: "startDate",
                     headerName: 'התחלת נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data.startDate).format('HH:MM ,D/MM/YYYY');
+                        return this.$moment(params.data.startDate).format('HH:mm ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "finishDate",
                     headerName: 'סיום נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data.finishDate).format('HH:MM ,D/MM/YYYY');
+                        return this.$moment(params.data.finishDate).format('HH:mm ,D/MM/YYYY');
                     }
                 },
                 {

@@ -27,7 +27,7 @@
                          :columnDefs="ColumnDefs"
                          :defaultColDef="defaultColDef"
                          :rowData="RowData"
-                         :enableRtl ="true"
+                         :enableRtl="true"
                          @grid-ready="onGridReady">
             </ag-grid-vue>
         </v-card>
@@ -37,6 +37,9 @@
 
 <script>
     import { AgGridVue } from 'ag-grid-vue';
+    import UserType  from '../enums/userTypeEnum.js';
+
+
     export default {
         components: { AgGridVue },
         name: "MainTable",
@@ -44,14 +47,14 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            user: {ID:"taxiStation"},
+            GetDriveHistoryData: { ID: "Station", userType: UserType.station },
             defaultColDef: {
                 sortable: true,
                 resizable: true,
             },
         }),
         created() {
-            this.$http.post("/api/main/GetDriveHistory", this.user).then((response) => {
+            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
                 console.log(response.data);
                 this.$store.commit('SetRowData', response.data.DriveHistory);
             });
@@ -68,7 +71,7 @@
             }
         },
         methods: {
-            SizeToFit(){
+            SizeToFit() {
                 this.gridApi.sizeColumnsToFit();
             },
             onGridReady(params) {
@@ -78,7 +81,7 @@
             ExortToCsc() {
                 this.gridApi.exportDataAsExcel();
             },
-            
+
         },
         beforeMount() {
             this.ColumnDefs = [
@@ -102,14 +105,14 @@
                     field: "startDate",
                     headerName: 'התחלת נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data.startDate).format('HH:MM ,D/MM/YYYY');
+                        return this.$moment(params.data.startDate).format('HH:mm ,D/MM/YYYY');
                     }
                 },
                 {
                     field: "finishDate",
                     headerName: 'סיום נסיעה',
                     valueGetter: params => {
-                        return this.$moment(params.data.finishDate).format('HH:MM ,D/MM/YYYY');
+                        return this.$moment(params.data.finishDate).format('HH:mm ,D/MM/YYYY');
                     }
                 },
                 {
@@ -125,7 +128,7 @@
                     headerName: 'נקודות הורדה',
                 }
             ];
-            
+
         },
     };
 </script>
@@ -136,7 +139,7 @@
     }
 
     .ag-grid-size {
-        width:100%;
+        width: 100%;
         height: 90%;
     }
 
@@ -179,9 +182,11 @@
         white-space: nowrap;
         vertical-align: middle;
     }
-    .historySize{
+
+    .historySize {
         height: 100%;
     }
+
     .label {
         display: inline-block;
         margin-bottom: 0.5rem;
@@ -209,7 +214,5 @@
         font-family: Arial, Helvetica, sans-serif;
     }
 </style>
-
-
 
 

@@ -1,11 +1,18 @@
-need this versions:
+Taxi station project. this project have 3 componenets: station, taxi and client.
 
-nodejs: v16.14.2
+technology: c#, sql server (ssms), vuejs, js, html, css.
 
-NPM : 8.5.0
+technology tools: docker, kafka, git, pusher.
 
-need to connect to pusher: https://dashboard.pusher.com/apps/1522722
+to run the template you need this versions of nodejs and npm:
 
-need docker image cp-kafka (ip: 9092) and cp-zookeeper(ip: 2181)
+* nodejs: v16.14.2
 
-conduktor is kafka user interface
+* NPM : 8.5.0
+
+
+extra information to run the project:
+
+* docker desktop
+* docker image cp-kafka (ip: 9092)
+* docker image cp-zookeeper(ip: 2181)

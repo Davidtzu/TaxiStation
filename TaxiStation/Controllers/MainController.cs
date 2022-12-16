@@ -24,8 +24,10 @@ namespace TaxiStation.Controllers
     {
         private static IProducer<Null, string> _producer;
         private static ClusterClient _cluster;
+        private static Pusher _pusher;
         private static string _searchingUserID { get; set; }
         private static string _taxiLisining { get; set; }
+        private static readonly Random random = new Random();
 
         [HttpPost("MessagesFromUser")]
         public async Task<ActionResult> MessagesFromUser(MessageDTO dto)
@@ -35,8 +37,8 @@ namespace TaxiStation.Controllers
                 if (string.IsNullOrEmpty(_searchingUserID))
                 {
                     _searchingUserID = dto.userID;
-                    await UserSubscribeAsPrudocer((int)PusherAction.SearchTaxi);
                 }
+                await UserSubscribeAsPrudocer((int)PusherAction.SearchTaxi);
                 return Ok();
             }
             catch (Exception ex)
@@ -52,16 +54,19 @@ namespace TaxiStation.Controllers
             try
             {
                 userType type;
-                if (user.ID.Length == 1) //users
+                if (user.userType == (int)userType.users) //users
                 {
                     type = userType.users;
                 }
-                else if (user.ID.Length == 2) //taxis
+                else if (user.userType == (int)userType.taxis) //taxis
                 {
                     type = userType.taxis;
-                    TaxiSubscribeAsConsumer();
+                    if (_cluster == null)
+                    {
+                        await TaxiSubscribeAsConsumer();
+                    }
                 }
-                else //taxiStation
+                else //station
                 {
                     type = userType.taxiStation;
                 }
@@ -84,31 +89,38 @@ namespace TaxiStation.Controllers
         {
             try
             {
-                var options = new PusherOptions
+                if (_pusher == null)
                 {
-                    Cluster = "us2",
-                    Encrypted = true
-                };
-                var pusher = new Pusher(
-                  "1522722",
-                  "52a43643bf829d8624d0",
-                  "1ac2b30992b6c8e36564",
-                  options);
+                    var options = new PusherOptions
+                    {
+                        Cluster = "us2",
+                        Encrypted = true
+                    };
+                    _pusher = new Pusher(
+                      "1522722",
+                      "52a43643bf829d8624d0",
+                      "1ac2b30992b6c8e36564",
+                      options);
+                }
                 if (dto.action == (int)PusherAction.GetDrive)
                 {
                     if (_taxiLisining == null)
                     {
                         _taxiLisining = dto.taxiID;
                     }
-                    clsDal.AddTaxiToPool(int.Parse(dto.taxiID));
-                    Thread.Sleep(6000);
-                    string taxiID = GetCloserTaxiAvailable();
-                    int action = (int)PusherAction.foundTaxi;
-                    if (taxiID == PusherAction.noneTaxiAvailable.ToString())
+                    int action;
+                    clsDal.AddTaxiToPool(int.Parse(dto.taxiID)); // add to the list of taxis that accept the request.
+                    Thread.Sleep(6000);                   // wait for all taxis to register.
+                    string taxiID = GetCloserTaxiAvailable();             // after some time, the closess taxi is choosen 
+                    if (string.IsNullOrEmpty(taxiID))
                     {
-                        action = 4;
+                        action = (int)PusherAction.noneTaxiAvailable;     //in case none taxi has accept the request.
                     }
-                    await pusher.TriggerAsync(
+                    else
+                    {
+                        action = (int)PusherAction.foundTaxi;
+                    }
+                    await _pusher.TriggerAsync(                           // msg to all registered taxis who was choosen
                       "chat",
                       "message",
                       new
@@ -124,7 +136,6 @@ namespace TaxiStation.Controllers
                 Console.WriteLine("ERROR in MessagesFromTaxi: " + ex.Message);
                 return BadRequest();
             }
-
         }
 
         [HttpPost("InsertDrive")]
@@ -137,9 +148,12 @@ namespace TaxiStation.Controllers
             try
             {
                 bool isAdded = clsDal.InsertDrive(_searchingUserID, taxi.taxiID);
-                Thread.Sleep(3000);
+                if (!isAdded)
+                {
+                    Console.WriteLine("ERROR in clsDal.InsertDrive: ");
+                    return BadRequest();
+                }
                 clsDal.FinishDrive(int.Parse(taxi.taxiID), int.Parse(_searchingUserID));
-                Thread.Sleep(2000);
                 clsDal.ClearPoolOfTaxis();
                 return Ok(isAdded);
             }
@@ -151,7 +165,7 @@ namespace TaxiStation.Controllers
 
         }
 
-        public void TaxiSubscribeAsConsumer()
+        public async Task<IActionResult> TaxiSubscribeAsConsumer()
         {
             try
             {
@@ -179,29 +193,32 @@ namespace TaxiStation.Controllers
                         await MessagesFromConsumers(dto);
                     }
                 };
+                return Ok();
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error in TaxiSubscribeAsConsumer " + ex.Message);
+                return BadRequest();
             }
         }
-
         public async Task<ActionResult> MessagesFromConsumers(MessageDTO dto)
         {
             try
             {
-                var options = new PusherOptions
+                if (_pusher == null)
                 {
-                    Cluster = "us2",
-                    Encrypted = true
-                };
-                var pusher = new Pusher(
-                  "1522722",
-                  "52a43643bf829d8624d0",
-                  "1ac2b30992b6c8e36564",
-                  options);
-
-                await pusher.TriggerAsync(
+                    var options = new PusherOptions
+                    {
+                        Cluster = "us2",
+                        Encrypted = true
+                    };
+                    _pusher = new Pusher(
+                      "1522722",
+                      "52a43643bf829d8624d0",
+                      "1ac2b30992b6c8e36564",
+                      options);
+                }
+                await _pusher.TriggerAsync(
                   "chat",
                   "message",
                   new
@@ -224,13 +241,12 @@ namespace TaxiStation.Controllers
                 var taxis = clsDal.GetLisiningTaxis().Tables[0].AsEnumerable().Select(dr => new AvailableTaxis(dr)).ToList();
                 if (taxis == null)
                 {
-                    return PusherAction.noneTaxiAvailable.ToString();
+                    return string.Empty;
                 }
-                Random rnd = new Random();
                 Point DriverLocation = new Point
                 {
-                    X = rnd.Next(1, 50),
-                    Y = rnd.Next(1, 50)
+                    X = random.Next(1, 50),
+                    Y = random.Next(1, 50)
                 };
                 double minimumDistance = double.MaxValue;
                 string taxiID = string.Empty;
@@ -258,11 +274,15 @@ namespace TaxiStation.Controllers
             try
             {
                 CancellationToken cancellationToken = new CancellationToken();
-                var config = new ProducerConfig()
+
+                if (_producer == null)
                 {
-                    BootstrapServers = "localhost:9092"
-                };
-                _producer = new ProducerBuilder<Null, string>(config).Build();
+                    var config = new ProducerConfig()
+                    {
+                        BootstrapServers = "localhost:9092"
+                    };
+                    _producer = new ProducerBuilder<Null, string>(config).Build();
+                }
                 await _producer.ProduceAsync("demo", new Message<Null, string>()
                 {
                     Value = action.ToString()

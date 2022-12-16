@@ -114,7 +114,6 @@ namespace TaxiStation.DAL
                 using (var command = new SqlCommand("InsertDrive", conn))
                 {
                     SqlDataAdapter sa = new SqlDataAdapter();
-
                     sa.SelectCommand = command;
                     command.CommandType = CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("userID", userID);

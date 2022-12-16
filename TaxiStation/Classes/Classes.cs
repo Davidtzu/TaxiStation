@@ -1,6 +1,16 @@
-﻿using System;
+﻿using Confluent.Kafka;
+using Kafka.Public.Loggers;
+using Kafka.Public;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Text;
 
 namespace TaxiStation.Classes
 {
@@ -13,6 +23,7 @@ namespace TaxiStation.Classes
         public double cost { get; set; }
         public DateTime startDate { get; set; }
         public DateTime finishDate { get; set; }
+        //להוסיף איפה הורד ואיפה נאסף
         public string pickUp { get; set; }
         public string takenDown { get; set; }
         public DriveHistory() { }
@@ -60,5 +71,6 @@ namespace TaxiStation.Classes
     public class SearchHistoryByID
     {
         public string ID { get; set; }
+        public int userType { get; set; }
     }
 }
