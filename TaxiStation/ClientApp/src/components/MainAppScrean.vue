@@ -17,7 +17,7 @@
                 היסטוריית נסיעות
                 <label class="mx-1">|</label>
                 <v-card-actions>
-                    <v-btn outlined x-small @click="ExortToCsc" color="#28a745">
+                    <v-btn outlined x-small @click="ExortToCsc" class="btnClass">
                         <v-icon>mdi-microsoft-excel</v-icon>יצוא לאקסל
                     </v-btn>
                 </v-card-actions>
@@ -28,7 +28,7 @@
                          :defaultColDef="defaultColDef"
                          :rowData="RowData"
                          :enableRtl="true"
-                         @grid-ready="onGridReady">
+                         @grid-ready="OnGridReady">
             </ag-grid-vue>
         </v-card>
     </div>
@@ -37,9 +37,6 @@
 
 <script>
     import { AgGridVue } from 'ag-grid-vue';
-    import UserType  from '../enums/userTypeEnum.js';
-
-
     export default {
         components: { AgGridVue },
         name: "MainTable",
@@ -47,16 +44,16 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            GetDriveHistoryData: { ID: "Station", userType: UserType.station },
+            id: "Station",
             defaultColDef: {
                 sortable: true,
                 resizable: true,
             },
+            rowData:null
         }),
         created() {
-            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
-                console.log(response.data);
-                this.$store.commit('SetRowData', response.data.DriveHistory);
+            this.$http.post("/api/main/GetDriveHistoryByStation", {id: this.id}).then((response) => {
+                this.rowData = response.data.driveHistory;
             });
             window.addEventListener("resize", this.SizeToFit);
         },
@@ -67,14 +64,14 @@
         },
         computed: {
             RowData() {
-                return this.$store.state.rowData;
+                return this.rowData;
             }
         },
         methods: {
             SizeToFit() {
                 this.gridApi.sizeColumnsToFit();
             },
-            onGridReady(params) {
+            OnGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
             },
@@ -214,5 +211,8 @@
         font-family: Arial, Helvetica, sans-serif;
     }
 </style>
-
-
+<style scoped>
+    .btnClass{
+    color:#28a745
+    }
+</style>

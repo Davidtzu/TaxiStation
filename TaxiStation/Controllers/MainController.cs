@@ -1,20 +1,12 @@
-﻿using Confluent.Kafka;
-using IT_TaxiStation;
-using Kafka.Public;
-using Kafka.Public.Loggers;
-using Microsoft.AspNetCore.Mvc;
-using PusherServer;
+﻿using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using TaxiStation.Classes;
+using System.Xml.Linq;
+using TaxiStation.Business_Logic;
 using TaxiStation.DAL;
 using TaxiStation.dtos;
-
+using TaxiStation.Enums;
 
 namespace TaxiStation.Controllers
 {
@@ -22,279 +14,149 @@ namespace TaxiStation.Controllers
     [ApiController]
     public class MainController : ControllerBase
     {
-        private static IProducer<Null, string> _producer;
-        private static ClusterClient _cluster;
-        private static Pusher _pusher;
-        private static string _searchingUserID { get; set; }
-        private static string _taxiLisining { get; set; }
-        private static readonly Random random = new Random();
+        private BusinessLogic _businessLogic;
+        public BusinessLogic bs
+        {
+            get
+            {
+                if (_businessLogic == null)
+                {
+                    _businessLogic = new BusinessLogic();
+                }
+                return _businessLogic;
+            }
+        }
 
         [HttpPost("MessagesFromUser")]
-        public async Task<ActionResult> MessagesFromUser(MessageDTO dto)
+        public async Task<IActionResult> MessagesFromUser(pusherData dto, CancellationToken cancellationToken)
         {
             try
             {
-                if (string.IsNullOrEmpty(_searchingUserID))
+                if (dto == null)
                 {
-                    _searchingUserID = dto.userID;
+                    return BadRequest();
                 }
-                await UserSubscribeAsPrudocer((int)PusherAction.SearchTaxi);
-                return Ok();
+
+                return Ok(await bs.UserSubscribeAsPrudocer(dto.action, dto.id, cancellationToken));
             }
             catch (Exception ex)
             {
                 Console.WriteLine("ERROR in MessagesFromUser: " + ex.Message);
-                return BadRequest();
+                return StatusCode(500);
             }
         }
 
-        [HttpPost("GetDriveHistory")]
-        public async Task<IActionResult> GetDriveHistory(SearchHistoryByID user)
+        [HttpPost("GetDriveHistoryByUser")]
+        public async Task<IActionResult> GetDriveHistoryByUser(SearchHistoryByID user)
         {
             try
             {
-                userType type;
-                if (user.userType == (int)userType.users) //users
+                if (user == null)
                 {
-                    type = userType.users;
+                    return BadRequest();
                 }
-                else if (user.userType == (int)userType.taxis) //taxis
-                {
-                    type = userType.taxis;
-                    if (_cluster == null)
-                    {
-                        await TaxiSubscribeAsConsumer();
-                    }
-                }
-                else //station
-                {
-                    type = userType.taxiStation;
-                }
-                var ds = clsDal.GetDriveHistory(user.ID, (int)type);
-
-                var DriveHistory = ds.Tables[Helpers.c_tablename]
-                    .AsEnumerable().Select(dr => new DriveHistory(dr)).ToList();
-
-                return Ok(new { DriveHistory });
+                string pusherAppKey = Environment.GetEnvironmentVariable("pusherAppKey");
+                var driveHistory = clsDal.GetDriveHistory(user.id, (int)userType.user);
+                return Ok(new { driveHistory, pusherAppKey });
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in GetDriveHistory " + ex.Message);
-                return BadRequest();
+                Console.WriteLine("Error in GetDriveHistoryByUser " + ex.Message);
+                return StatusCode(500);
+            }
+        }
+        [HttpPost("GetDriveHistoryByTaxi")]
+        public async Task<IActionResult> GetDriveHistoryByTaxi(SearchHistoryByID taxi)
+        {
+            try
+            {
+                if (taxi == null)
+                {
+                    return BadRequest();
+                }
+                string pusherAppKey = Environment.GetEnvironmentVariable("pusherAppKey");
+                var driveHistory = clsDal.GetDriveHistory(taxi.id, (int)userType.taxi);
+                return Ok(new { driveHistory, pusherAppKey });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in GetDriveHistoryByTaxi " + ex.Message);
+                return StatusCode(500);
+            }
+        }
+
+        [HttpGet("TaxiSubscribeAsConsumer")]
+        public async Task<ActionResult> TaxiSubscribeAsConsumer(CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await bs.TaxiSubscribeAsConsumer(cancellationToken));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR in TaxiSubscribeAsConsumer: " + ex.Message);
+                return StatusCode(500);
+            }
+        }
+
+
+        [HttpPost("GetDriveHistoryByStation")]
+        public async Task<IActionResult> GetDriveHistoryByStation(SearchHistoryByID user)
+        {
+            try
+            {
+                if (user == null)
+                {
+                    return BadRequest();
+                }
+                var driveHistory = clsDal.GetDriveHistory(user.id, (int)userType.station);
+                return Ok(new { driveHistory });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in GetDriveHistoryByStation " + ex.Message);
+                return StatusCode(500);
             }
         }
 
         [HttpPost("MessagesFromTaxi")]
-        public async Task<ActionResult> MessagesFromTaxi(MessageDTO dto)
+        public async Task<IActionResult> MessagesFromTaxi(taxiPusherData dto, CancellationToken cancellationToken)
         {
             try
             {
-                if (_pusher == null)
+                if (dto == null)
                 {
-                    var options = new PusherOptions
-                    {
-                        Cluster = "us2",
-                        Encrypted = true
-                    };
-                    _pusher = new Pusher(
-                      "1522722",
-                      "52a43643bf829d8624d0",
-                      "1ac2b30992b6c8e36564",
-                      options);
+                    return BadRequest();
                 }
-                if (dto.action == (int)PusherAction.GetDrive)
-                {
-                    if (_taxiLisining == null)
-                    {
-                        _taxiLisining = dto.taxiID;
-                    }
-                    int action;
-                    clsDal.AddTaxiToPool(int.Parse(dto.taxiID)); // add to the list of taxis that accept the request.
-                    Thread.Sleep(6000);                   // wait for all taxis to register.
-                    string taxiID = GetCloserTaxiAvailable();             // after some time, the closess taxi is choosen 
-                    if (string.IsNullOrEmpty(taxiID))
-                    {
-                        action = (int)PusherAction.noneTaxiAvailable;     //in case none taxi has accept the request.
-                    }
-                    else
-                    {
-                        action = (int)PusherAction.foundTaxi;
-                    }
-                    await _pusher.TriggerAsync(                           // msg to all registered taxis who was choosen
-                      "chat",
-                      "message",
-                      new
-                      {
-                          userID = taxiID,
-                          action = action
-                      });
-                }
-                return Ok();
+                return Ok(await bs.PusherMessagesFromTaxi(dto, cancellationToken));
             }
             catch (Exception ex)
             {
                 Console.WriteLine("ERROR in MessagesFromTaxi: " + ex.Message);
-                return BadRequest();
+                return StatusCode(500);
             }
         }
 
         [HttpPost("InsertDrive")]
-        public IActionResult InsertDrive(TaxiID taxi)
+        public IActionResult InsertDrive(idData data)
         {
-            if (string.IsNullOrEmpty(_searchingUserID) || string.IsNullOrEmpty(taxi.taxiID))
+            if (string.IsNullOrEmpty(data.taxiID) || string.IsNullOrEmpty(data.userID))
             {
                 return BadRequest();
             }
             try
             {
-                bool isAdded = clsDal.InsertDrive(_searchingUserID, taxi.taxiID);
-                if (!isAdded)
-                {
-                    Console.WriteLine("ERROR in clsDal.InsertDrive: ");
-                    return BadRequest();
-                }
-                clsDal.FinishDrive(int.Parse(taxi.taxiID), int.Parse(_searchingUserID));
-                clsDal.ClearPoolOfTaxis();
+                bool isAdded = clsDal.InsertDrive(data.userID, data.taxiID);
+                clsDal.FinishDrive(int.Parse(data.taxiID), int.Parse(data.userID));
                 return Ok(isAdded);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("ERROR in InsertDrive: " + ex.Message);
-                return BadRequest();
+                return StatusCode(500);
             }
 
         }
 
-        public async Task<IActionResult> TaxiSubscribeAsConsumer()
-        {
-            try
-            {
-                MessageDTO dto = null;
-                if (_cluster == null)
-                {
-                    _cluster = new ClusterClient(new Configuration
-                    {
-                        Seeds = "localhost:9092"
-                    }, new ConsoleLogger());
-                }
-                _cluster.ConsumeFromLatest("demo");
-                _cluster.MessageReceived += async record =>
-                {
-                    Console.WriteLine($"Received Value From Producer: {Encoding.UTF8.GetString(record.Value as byte[])}");
-                    string value = Encoding.UTF8.GetString(record.Value as byte[]);
-                    if (int.Parse(value) == (int)PusherAction.SearchTaxi)
-                    {
-                        dto = new MessageDTO()
-                        {
-                            userID = "",
-                            taxiID = "",
-                            action = (int)PusherAction.SearchTaxi
-                        };
-                        await MessagesFromConsumers(dto);
-                    }
-                };
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in TaxiSubscribeAsConsumer " + ex.Message);
-                return BadRequest();
-            }
-        }
-        public async Task<ActionResult> MessagesFromConsumers(MessageDTO dto)
-        {
-            try
-            {
-                if (_pusher == null)
-                {
-                    var options = new PusherOptions
-                    {
-                        Cluster = "us2",
-                        Encrypted = true
-                    };
-                    _pusher = new Pusher(
-                      "1522722",
-                      "52a43643bf829d8624d0",
-                      "1ac2b30992b6c8e36564",
-                      options);
-                }
-                await _pusher.TriggerAsync(
-                  "chat",
-                  "message",
-                  new
-                  {
-                      userID = dto.taxiID,
-                      action = dto.action
-                  });
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("ERROR in MessagesFromConsumers: " + ex.Message);
-                return BadRequest();
-            }
-        }
-        public string GetCloserTaxiAvailable()
-        {
-            try
-            {
-                var taxis = clsDal.GetLisiningTaxis().Tables[0].AsEnumerable().Select(dr => new AvailableTaxis(dr)).ToList();
-                if (taxis == null)
-                {
-                    return string.Empty;
-                }
-                Point DriverLocation = new Point
-                {
-                    X = random.Next(1, 50),
-                    Y = random.Next(1, 50)
-                };
-                double minimumDistance = double.MaxValue;
-                string taxiID = string.Empty;
-
-                foreach (var taxi in taxis)
-                {
-                    double getDistance = Helpers.GetDistance(DriverLocation, taxi.location);
-                    if (getDistance < minimumDistance)
-                    {
-                        minimumDistance = getDistance;
-                        taxiID = taxi.taxiID;
-                    }
-                }
-                return taxiID;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in GetCloserTaxiAvailable " + ex.Message);
-                return string.Empty;
-            }
-
-        }
-        public async Task<bool> UserSubscribeAsPrudocer(int action)
-        {
-            try
-            {
-                CancellationToken cancellationToken = new CancellationToken();
-
-                if (_producer == null)
-                {
-                    var config = new ProducerConfig()
-                    {
-                        BootstrapServers = "localhost:9092"
-                    };
-                    _producer = new ProducerBuilder<Null, string>(config).Build();
-                }
-                await _producer.ProduceAsync("demo", new Message<Null, string>()
-                {
-                    Value = action.ToString()
-                }, cancellationToken);
-                _producer.Flush(TimeSpan.FromSeconds(10));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in UserSubscribeAsPrudocer " + ex.Message);
-                return false;
-            }
-        }
     }
 }

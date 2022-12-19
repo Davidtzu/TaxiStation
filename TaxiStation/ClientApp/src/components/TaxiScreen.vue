@@ -16,7 +16,14 @@
             <v-card-title class="box-header">
                 היסטוריית נסיעות שלי
                 <label class="mx-1">|</label>
-
+                <v-card-actions>
+                    <v-btn v-if="!rdyForDrive" outlined x-small @click="Toggle()" class="btnClassNotActive">
+                        <v-icon>mdi-car</v-icon>זמין לנסיעה
+                    </v-btn>
+                    <v-btn v-else outlined x-small @click="Toggle()" class="btnClassActive">
+                        <v-icon>mdi-car</v-icon>ביטול זמינות
+                    </v-btn>
+                </v-card-actions>
             </v-card-title>
 
             <ag-grid-vue class="ag-theme-balham ag-grid-size"
@@ -24,7 +31,7 @@
                          :defaultColDef="defaultColDef"
                          :rowData="RowData"
                          :enableRtl="true"
-                         @grid-ready="onGridReady">
+                         @grid-ready="OnGridReady">
             </ag-grid-vue>
         </v-card>
     </div>
@@ -34,7 +41,6 @@
     import { AgGridVue } from 'ag-grid-vue';
     import Pusher from 'pusher-js';
     import Action from '../enums/actionEnum.js';
-    import UserType  from '../enums/userTypeEnum.js';
     export default {
         components: { AgGridVue },
         name: "TaxiScreen",
@@ -42,20 +48,23 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            PusherData: { userID: "", taxiID: "20", action: Action.SearchTaxi },
-            GetDriveHistoryData: { ID: "20", userType: UserType.taxi },
+            PusherData: {id: "20", action: Action.searchTaxi },
+            id: "20",
             defaultColDef: {
                 sortable: true,
                 resizable: true,
             },
-            isTaxAvailable: true
+            isTaxAvailable: false,
+            rowData:null,
+            requestedUser:null,
+            pusherAppKey:null,
+            rdyForDrive:false
         }),
         created() {
-            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
-                console.log(response.data);
-                this.$store.commit('SetRowData', response.data.DriveHistory);
+            this.$http.post("/api/main/GetDriveHistoryByTaxi", {id: this.id}).then((response) => {
+                this.rowData = response.data.driveHistory;
+                this.pusherAppKey = response.data.pusherAppKey;
             });
-            this.subscribe();
             window.addEventListener("resize", this.SizeToFit);
         },
         watch: {
@@ -65,24 +74,47 @@
         },
         computed: {
             RowData() {
-                return this.$store.state.rowData;
+                return this.rowData;
             }
         },
         methods: {
+            Toggle(){
+              this.rdyForDrive = !this.rdyForDrive;
+              if(this.rdyForDrive){
+                this.Subscribe();
+                this.$http.get("/api/main/TaxiSubscribeAsConsumer").then((response) => {
+                    if (response.data === true) {
+                        this.isTaxAvailable = true;
+                    }
+                    else{
+                        this.$swal.fire({
+                            title: "שגיאה",
+                            icon: "error",
+                            text: ".אירעה שגיאה בהרשמה אל המוניות הזמינות"
+                        });
+                        this.isTaxAvailable = false;
+                        this.rdyForDrive = !this.rdyForDrive;
+                    }
+                })
+              } 
+              else{
+                this.isTaxAvailable = false;
+              } 
+            },
             SizeToFit() {
                 this.gridApi.sizeColumnsToFit();
             },
-            onGridReady(params) {
+            OnGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
             },
-            refreshData() {
-                this.$http.post("/api/main/InsertDrive", { taxiID: this.GetDriveHistoryData.ID }).then((response) => {
+            RefreshData() {
+                this.$http.post("/api/main/InsertDrive", { taxiID: this.id, userID: this.requestedUser }).then((response) => {
                     if (response.data === true) {
                         setTimeout(() => {
-                            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
+                            this.$http.post("/api/main/GetDriveHistoryByTaxi", {id: this.id}).then((response) => {
                                 if (response && response.data) {
-                                    this.$store.commit('SetRowData', response.data.DriveHistory);
+                                    this.rowData = response.data.driveHistory;
                                     this.isTaxAvailable = true;
                                 }
                             })
@@ -103,15 +135,14 @@
                     });
                 });
             },
-            subscribe() {
+            Subscribe() {
                 Pusher.logToConsole = true;
-                const pusher = new Pusher('52a43643bf829d8624d0', {
+                const pusher = new Pusher(this.pusherAppKey, {
                     cluster: 'us2'
                 });
-
                 const channel = pusher.subscribe('chat');
                 channel.bind('message', data => {
-                    if (data.action == Action.SearchTaxi && this.isTaxAvailable) { //try to get drive
+                    if (data.action == Action.searchTaxi && this.isTaxAvailable) { //try to get drive
                         this.$swal.fire({
                             title: "?האם ברצונך לקבל נסיעה",
                             icon: "info",
@@ -122,7 +153,16 @@
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 this.isTaxAvailable = false;
-                                this.$http.post("/api/main/MessagesFromTaxi", { userID: "", taxiID: this.PusherData.taxiID, action: Action.GetDrive }).then((response) => {
+                                this.requestedUser = data.id;
+                                this.$http.post("/api/main/MessagesFromTaxi", {taxiId: this.id, userID: this.requestedUser,action: Action.getDrive }).then((response) => {
+                                    if(response.data === false){
+                                        this.$swal.fire({
+                                            title: "שגיאה",
+                                            icon: "error",
+                                            text: "שגיאה: " + err + "\n" + "אירעה שגיאה בקבלת הנסיעה."
+                                        });
+                                        console.log("ERROR in PusherMessagesFromTaxi");
+                                    }
                                 });
                             }
                         }).catch(function (err) {
@@ -133,16 +173,16 @@
                             });
                         });
                     }
-                    else if (data.userID === this.GetDriveHistoryData.ID && data.action == Action.foundTaxi && !this.isTaxAvailable) {
+                    else if (data.taxiID === this.id && data.action == Action.foundTaxi && !this.isTaxAvailable) {
                         this.$swal.fire({
                             title: "קבלת הנסיעה",
                             text: "!הנסיעה התקבלה",
                             icon: "success",
                             timer: 3000
                         });
-                        this.refreshData();
+                        this.RefreshData();
                     }
-                    else if (data.userID !== this.GetDriveHistoryData.ID && data.action == Action.foundTaxi && !this.isTaxAvailable) {
+                    else if (data.taxiID !== this.id && data.action == Action.foundTaxi && !this.isTaxAvailable) {
                         this.$swal.fire({
                             title: "מידע אודות הנסיעה",
                             text: "מונית קרובה יותר אל הלקוח קיבלה את הנסיעה",
@@ -203,3 +243,12 @@
         }
     };
 </script>
+
+<style scoped>
+    .btnClassNotActive{
+    color:green
+    }
+    .btnClassActive{
+    color:red
+    }
+</style>

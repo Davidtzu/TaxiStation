@@ -18,57 +18,35 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace IT_TaxiStation
+namespace TaxiStation.Helper
 {
     public static class Helpers
     {
         public static IHttpContextAccessor _accessor;
         public static IConfiguration _configuration;
+        private static readonly Random random = new Random();
 
         #region Constants
-        internal const string c_tablename = "tablename";
+        internal const string c_DriveHistoryTblName = "DriveHistory";
         #endregion
-
         public static void SetInitElements(IHttpContextAccessor accesor, IConfiguration configuration)
         {
             _configuration = configuration;
             _accessor = accesor;
         }
-
-        public static string getUserId()
-        {
-            string userName = "";
-            return userName;
-        }
-
-        public static Guid getAppId()
-        {
-            var ret = Guid.Parse(Environment.GetEnvironmentVariable("AppId"));
-            return ret;
-        }
-
-        public static double GetDistance(Point p1, Point p2) 
+        public static double GetDistance(Point p1, Point p2)
         {
             return Math.Sqrt((Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2)));
         }
-        public static string GetUserGroupsKey()
+        public static int GetRandomNumber()
         {
-            try
-            {
-                string UserGroupsKey = Helpers.getUserId() + "_" + _configuration.GetValue<string>("appName");
-                return UserGroupsKey;
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
+            return random.Next(1, 50);
         }
-
         internal static string getConnectionString()
         {
             SqlConnectionStringBuilder connectionStringBuilder = new SqlConnectionStringBuilder();
-            connectionStringBuilder.DataSource = "LAPTOP-E4MIDL72";
-            connectionStringBuilder.InitialCatalog = "TaxiStation";
+            connectionStringBuilder.DataSource = Environment.GetEnvironmentVariable("connectionStringDataSource");
+            connectionStringBuilder.InitialCatalog = Environment.GetEnvironmentVariable("connectionStringInitialCatalog");
             connectionStringBuilder.IntegratedSecurity = true;
             return connectionStringBuilder.ConnectionString;
         }

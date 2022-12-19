@@ -18,7 +18,7 @@
                 היסטוריית נסיעות שלי
                 <label class="mx-1">|</label>
                 <v-card-actions>
-                    <v-btn outlined x-small @click="searchTaxi" color="#28a745">
+                    <v-btn outlined x-small @click="SearchTaxi()" class="btnClass">
                         <v-icon>mdi-car</v-icon>חיפוש נסיעה
                     </v-btn>
                 </v-card-actions>
@@ -29,7 +29,7 @@
                          :defaultColDef="defaultColDef"
                          :rowData="RowData"
                          :enableRtl="true"
-                         @grid-ready="onGridReady">
+                         @grid-ready="OnGridReady">
             </ag-grid-vue>
         </v-card>
     </div>
@@ -40,8 +40,6 @@
     import { AgGridVue } from 'ag-grid-vue';
     import Pusher from 'pusher-js';
     import Action from '../enums/actionEnum.js';
-    import UserType  from '../enums/userTypeEnum.js';
-
     export default {
         components: { AgGridVue },
         name: "CustomerScreen",
@@ -49,20 +47,20 @@
             gridApi: null,
             ColumnDefs: null,
             search: "",
-            PusherData: { userID: "3", taxiID: "", action: Action.SearchTaxi },
-            GetDriveHistoryData: { ID: "3", userType: UserType.user },
+            PusherData: { id: "3", action: Action.searchTaxi },
+            id: "3",
             defaultColDef: {
                 sortable: true,
                 resizable: true,
             },
-
+            rowData:null,
+            pusherAppKey:null
         }),
         created() {
-            this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
-                console.log(response.data);
-                this.$store.commit('SetRowData', response.data.DriveHistory);
+            this.$http.post("/api/main/GetDriveHistoryByUser", {id: this.id}).then((response) => {
+                this.rowData = response.data.driveHistory;
+                this.pusherAppKey = response.data.pusherAppKey;
             });
-            this.subscribe();
             window.addEventListener("resize", this.SizeToFit);
         },
         watch: {
@@ -72,44 +70,44 @@
         },
         computed: {
             RowData() {
-                return this.$store.state.rowData;
+                return this.rowData;
             }
         },
         methods: {
             SizeToFit() {
                 this.gridApi.sizeColumnsToFit();
             },
-            onGridReady(params) {
+            OnGridReady(params) {
                 this.gridApi = params.api;
                 this.gridApi.sizeColumnsToFit();
             },
-            refreshData() {
+            RefreshData() {
                 setTimeout(() => {
-                    this.$http.post("/api/main/GetDriveHistory", this.GetDriveHistoryData).then((response) => {
+                    this.$http.post("/api/main/GetDriveHistoryByUser", {id: this.id}).then((response) => {
                         if (response && response.data) {
-                            this.$store.commit('SetRowData', response.data.DriveHistory);
+                            this.rowData = response.data.driveHistory;
                         }
                     })
                 }, 2000);
             },
-            subscribe() {
+            Subscribe() {
                 Pusher.logToConsole = true;
-                const pusher = new Pusher('52a43643bf829d8624d0', {
+                const pusher = new Pusher(this.pusherAppKey, {
                     cluster: 'us2'
                 });
 
                 const channel = pusher.subscribe('chat');
                 channel.bind('message', data => {
-                    if (data.action == Action.foundTaxi) {
+                    if (data.action == Action.foundTaxi && data.userID === this.id) {
                         this.$swal.fire({
                             title: "נמצא נהג",
                             text: "הנהג בדרך אליך",
                             icon: "info",
                             timer: 3000
                         });
-                        this.refreshData();
+                        this.RefreshData();
                     }
-                    else if (data.action == Action.noneTaxiAvailable) {
+                    else if (data.action == Action.noneTaxiAvailable && data.userID === this.id) {
                         this.$swal.fire({
                             title: "לא נמצא נהג",
                             text: "אנא נסה שנית מאוחר יותר",
@@ -120,8 +118,17 @@
 
                 });
             },
-            searchTaxi() {
+            SearchTaxi() {
+                this.Subscribe();
                 this.$http.post("/api/main/MessagesFromUser", this.PusherData).then((response) => {
+                    if(response.data === false){
+                        this.$swal.fire({
+                            title: "שגיאה",
+                            icon: "error",
+                            text: "שגיאה: " + err + "\n" + "אירעה שגיאה בחיפוש מונית."
+                        });
+                        console.log("ERROR in MessagesFromUser");
+                    }
                 });
             }
         },
@@ -173,3 +180,9 @@
         }
     }
 </script>
+
+<style scoped>
+    .btnClass{
+    color:#28a745
+    }
+</style>

@@ -1,4 +1,3 @@
-using IT_TaxiStation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,7 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using static IT_TaxiStation.Helpers;
+using TaxiStation.Helper;
 
 namespace Template_MVC_Vue
 {

@@ -3,12 +3,20 @@
     "Template_MVC_Vue": {
       "commandName": "Project",
       "launchBrowser": true,
-        "environmentVariables": {
-            "ASPNETCORE_ENVIRONMENT": "Development",
-            "JWT_SECRET": "SpecialAppSecret",
-            "sql13DbUser": "1",
-            "sql13DbPassword": "<!",
-        },
+      "environmentVariables": {
+
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "JWT_SECRET": "SpecialAppSecret",
+        "sql13DbUser": "1",
+        "sql13DbPassword": "<!",
+
+        "pusherAppID": "1522722",
+        "pusherAppKey": "52a43643bf829d8624d0",
+        "pusherAppSecret": "1ac2b30992b6c8e36564",
+        "connectionStringDataSource": "LAPTOP-E4MIDL72",
+        "connectionStringInitialCatalog": "TaxiStation",
+        "server": "localhost:9092"
+      },
       "dotnetRunMessages": "true",
       "applicationUrl": "https://localhost:8000"
     },
