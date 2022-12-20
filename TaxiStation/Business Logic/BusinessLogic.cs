@@ -24,12 +24,43 @@ namespace TaxiStation.Business_Logic
         private static IProducer<Null, string> _producer;
         private static ClusterClient _cluster;
         private static Pusher _pusher;
-        private static int _groupsID = 0;
-        public async Task<bool> PusherMessagesFromTaxi(taxiPusherData dto, CancellationToken cancellationToken)
+        
+        public ClusterClient cluster
         {
-            try
+            get
             {
-                bool result = false;
+                if (_cluster == null)
+                {
+                    _cluster = new ClusterClient(new Configuration
+                    {
+                        Seeds = Environment.GetEnvironmentVariable("server")
+                        
+                    }, new ConsoleLogger());
+                }
+                return _cluster;
+            }
+        }
+        
+        public IProducer<Null, string> producer
+        {
+            get
+            {
+                if (_producer == null)
+                {
+                    var config = new ProducerConfig()
+                    {
+                        BootstrapServers = Environment.GetEnvironmentVariable("server")
+                    };
+                    _producer = new ProducerBuilder<Null, string>(config).Build();
+                }
+                return _producer;
+            }
+        }
+        
+        public Pusher pusher
+        {
+            get
+            {
                 if (_pusher == null)
                 {
                     var options = new PusherOptions
@@ -43,6 +74,16 @@ namespace TaxiStation.Business_Logic
                       Environment.GetEnvironmentVariable("pusherAppSecret"),
                       options);
                 }
+                return _pusher;
+            }
+        }
+        
+        
+        public async Task<bool> PusherMessagesFromTaxi(taxiPusherData dto, CancellationToken cancellationToken)
+        {
+            try
+            {
+                bool result = false;
                 if (dto.action == (int)pusherAction.getDrive)
                 {
                     int action;
@@ -59,7 +100,7 @@ namespace TaxiStation.Business_Logic
                     }
                     if (!cancellationToken.IsCancellationRequested)
                     {
-                        await _pusher.TriggerAsync(                                      // msg to the taxi who was choosen
+                        await pusher.TriggerAsync(                                      // msg to the taxi who was choosen
                           "chat",
                           "message",
                           new
@@ -88,16 +129,8 @@ namespace TaxiStation.Business_Logic
         {
             try
             {
-                if (_cluster == null)
-                {
-                    _cluster = new ClusterClient(new Configuration
-                    {
-                        Seeds = Environment.GetEnvironmentVariable("server")
-                        
-                    }, new ConsoleLogger());
-                }
-                _cluster.ConsumeFromLatest("drives");
-                _cluster.MessageReceived += async record =>
+                cluster.ConsumeFromLatest("drives");
+                cluster.MessageReceived += async record =>
                 {
                     Console.WriteLine($"Received Value From Producer: {Encoding.UTF8.GetString(record.Value as byte[])}");
                     string[] value = Encoding.UTF8.GetString(record.Value as byte[]).Split(',');
@@ -133,20 +166,7 @@ namespace TaxiStation.Business_Logic
         {
             try
             {
-                if (_pusher == null)
-                {
-                    var options = new PusherOptions
-                    {
-                        Cluster = "us2",
-                        Encrypted = true
-                    };
-                    _pusher = new Pusher(
-                      Environment.GetEnvironmentVariable("pusherAppID"),
-                      Environment.GetEnvironmentVariable("pusherAppKey"),
-                      Environment.GetEnvironmentVariable("pusherAppSecret"),
-                      options);
-                }
-                await _pusher.TriggerAsync(
+                await pusher.TriggerAsync(
                   "chat",
                   "message",
                   new
@@ -201,19 +221,11 @@ namespace TaxiStation.Business_Logic
         {
             try
             {
-                if (_producer == null)
-                {
-                    var config = new ProducerConfig()
-                    {
-                        BootstrapServers = Environment.GetEnvironmentVariable("server")
-                    };
-                    _producer = new ProducerBuilder<Null, string>(config).Build();
-                }
-                await _producer.ProduceAsync("drives", new Message<Null, string>()
+                await producer.ProduceAsync("drives", new Message<Null, string>()
                 {
                     Value = action.ToString() + "," + userID
                 }, cancellationToken);
-                _producer.Flush(TimeSpan.FromSeconds(10));
+                producer.Flush(TimeSpan.FromSeconds(10));
                 return true;
             }
             catch (Exception ex)
