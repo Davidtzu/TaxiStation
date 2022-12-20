@@ -56,7 +56,7 @@ namespace TaxiStation.Controllers
                     return BadRequest();
                 }
                 string pusherAppKey = Environment.GetEnvironmentVariable("pusherAppKey");
-                var driveHistory = clsDal.GetDriveHistory(user.id, (int)userType.user);
+                var driveHistory = clsDal.GetDriveHistory(user.id, userType.user);
                 return Ok(new { driveHistory, pusherAppKey });
             }
             catch (Exception ex)
@@ -75,7 +75,7 @@ namespace TaxiStation.Controllers
                     return BadRequest();
                 }
                 string pusherAppKey = Environment.GetEnvironmentVariable("pusherAppKey");
-                var driveHistory = clsDal.GetDriveHistory(taxi.id, (int)userType.taxi);
+                var driveHistory = clsDal.GetDriveHistory(taxi.id, userType.taxi);
                 return Ok(new { driveHistory, pusherAppKey });
             }
             catch (Exception ex)
@@ -109,7 +109,7 @@ namespace TaxiStation.Controllers
                 {
                     return BadRequest();
                 }
-                var driveHistory = clsDal.GetDriveHistory(user.id, (int)userType.station);
+                var driveHistory = clsDal.GetDriveHistory(user.id, userType.station);
                 return Ok(new { driveHistory });
             }
             catch (Exception ex)
