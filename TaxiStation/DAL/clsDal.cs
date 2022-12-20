@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using TaxiStation.dtos;
 using TaxiStation.Helper;
+using TaxiStation.Enums;
 
 namespace TaxiStation.DAL
 {
@@ -64,7 +65,7 @@ namespace TaxiStation.DAL
             return res.Tables[0].AsEnumerable().Select(dr => new AvailableTaxis(dr)).ToList();
         }
 
-        public static List<DriveHistory> GetDriveHistory(string userID, int userType)
+        public static List<DriveHistory> GetDriveHistory(string userID, userType userType)
         {
             DataSet res = new DataSet("GetDriveHistory");
             using (var conn = new SqlConnection(Helpers.getConnectionString()))
@@ -76,7 +77,7 @@ namespace TaxiStation.DAL
                     sa.SelectCommand = command;
                     command.CommandType = CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("UserID", userID);
-                    command.Parameters.AddWithValue("UserType", userType);
+                    command.Parameters.AddWithValue("UserType", (int)userType);
                     sa.Fill(res);
                     if (res == null || res.Tables.Count < 1)
                     {
